@@ -1,0 +1,5 @@
+service:
+  serverAddress: "localhost"
+  serverPort: 4112
+  typeOfService: "gin"
+  typeOfRepository: "in-memory"

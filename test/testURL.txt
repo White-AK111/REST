@@ -1,0 +1,13 @@
+# Add some tasks
+curl -iL -w "\n" -X POST -H "Content-Type: application/json" --data '{"text":"task first","tags":["todo", "life"], "due":"2021-10-24T15:04:05+00:00"}' localhost:4112/task/
+curl -iL -w "\n" -X POST -H "Content-Type: application/json" --data '{"text":"buy milk","tags":["todo"], "due":"2021-11-01T15:04:05+00:00"}' localhost:4112/task/
+
+# Get tasks by tag
+curl -iL -w "\n" localhost:4112/tag/todo/
+
+# Get tasks by due
+curl -iL -w "\n" localhost:4112/due/2021/12/01
+
+# Start by deleting all existing tasks on the server
+curl -iL -w "\n" -X DELETE localhost:4112/task/
+

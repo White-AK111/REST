@@ -1,2 +1,2 @@
 # REST
-Examples of REST Implementation in Go
+Examples of REST implementation in Go

@@ -225,7 +225,7 @@ func Init(cfg *config.Config) {
 	mux := http.NewServeMux()
 	var server *taskServer
 
-	switch cfg.Service.TypeOfRepository {
+	switch cfg.Server.TypeOfRepository {
 	case "in-memory":
 		server = NewTaskServerInmemory()
 	default:
@@ -236,6 +236,9 @@ func Init(cfg *config.Config) {
 	mux.HandleFunc("/tag/", server.tagHandler)
 	mux.HandleFunc("/due/", server.dueHandler)
 
-	log.Printf("Start service on: %s\n", cfg.Service.ServerAddress+":"+strconv.Itoa(cfg.Service.ServerPort))
-	log.Fatal(http.ListenAndServe(cfg.Service.ServerAddress+":"+strconv.Itoa(cfg.Service.ServerPort), mux))
+	log.Printf("Start server on: %s\n", cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort))
+	err := http.ListenAndServe(cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort), mux)
+	if err != nil {
+		log.Fatalf("Error on start server: %s\n", err)
+	}
 }

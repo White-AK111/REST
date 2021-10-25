@@ -124,7 +124,7 @@ func Init(cfg *config.Config) {
 	router := gin.Default()
 	var server *taskServer
 
-	switch cfg.Service.TypeOfRepository {
+	switch cfg.Server.TypeOfRepository {
 	case "in-memory":
 		server = NewTaskServerInmemory()
 	default:
@@ -139,9 +139,9 @@ func Init(cfg *config.Config) {
 	router.GET("/tag/:tag", server.tagHandler)
 	router.GET("/due/:year/:month/:day", server.dueHandler)
 
-	log.Printf("Start service on: %s\n", cfg.Service.ServerAddress+":"+strconv.Itoa(cfg.Service.ServerPort))
-	err := router.Run(cfg.Service.ServerAddress + ":" + strconv.Itoa(cfg.Service.ServerPort))
+	log.Printf("Start server on: %s\n", cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort))
+	err := router.Run(cfg.Server.ServerAddress + ":" + strconv.Itoa(cfg.Server.ServerPort))
 	if err != nil {
-		log.Fatalf("Error on start service: %s\n", err)
+		log.Fatalf("Error on start server: %s\n", err)
 	}
 }

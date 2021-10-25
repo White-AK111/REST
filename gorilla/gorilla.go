@@ -162,7 +162,7 @@ func Init(cfg *config.Config) {
 	router.StrictSlash(true)
 	var server *taskServer
 
-	switch cfg.Service.TypeOfRepository {
+	switch cfg.Server.TypeOfRepository {
 	case "in-memory":
 		server = NewTaskServerInmemory()
 	default:
@@ -172,11 +172,14 @@ func Init(cfg *config.Config) {
 	router.HandleFunc("/task/", server.createTaskHandler).Methods("POST")
 	router.HandleFunc("/task/", server.getAllTasksHandler).Methods("GET")
 	router.HandleFunc("/task/", server.deleteAllTasksHandler).Methods("DELETE")
-	router.HandleFunc("/task/{id:[0-9]+}/", server.getTaskHandler).Methods("GET")
-	router.HandleFunc("/task/{id:[0-9]+}/", server.deleteTaskHandler).Methods("DELETE")
-	router.HandleFunc("/tag/{tag}/", server.tagHandler).Methods("GET")
-	router.HandleFunc("/due/{year:[0-9]+}/{month:[0-9]+}/{day:[0-9]+}/", server.dueHandler).Methods("GET")
+	router.HandleFunc("/task/{id:[0-9]+}", server.getTaskHandler).Methods("GET")
+	router.HandleFunc("/task/{id:[0-9]+}", server.deleteTaskHandler).Methods("DELETE")
+	router.HandleFunc("/tag/{tag}", server.tagHandler).Methods("GET")
+	router.HandleFunc("/due/{year:[0-9]+}/{month:[0-9]+}/{day:[0-9]+}", server.dueHandler).Methods("GET")
 
-	log.Printf("Start service on: %s\n", cfg.Service.ServerAddress+":"+strconv.Itoa(cfg.Service.ServerPort))
-	log.Fatal(http.ListenAndServe(cfg.Service.ServerAddress+":"+strconv.Itoa(cfg.Service.ServerPort), router))
+	log.Printf("Start server on: %s\n", cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort))
+	err := http.ListenAndServe(cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort), router)
+	if err != nil {
+		log.Fatalf("Error on start server: %s\n", err)
+	}
 }

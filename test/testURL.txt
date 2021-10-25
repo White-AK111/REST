@@ -5,6 +5,9 @@ curl -iL -w "\n" -X POST -H "Content-Type: application/json" --data '{"text":"bu
 # Get tasks by tag
 curl -iL -w "\n" localhost:4112/tag/todo/
 
+# Get tasks by id
+curl -iL -w "\n" localhost:4112/task/1/
+
 # Get tasks by due
 curl -iL -w "\n" localhost:4112/due/2021/12/01
 

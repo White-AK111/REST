@@ -8,12 +8,12 @@ import (
 
 // Config structure for all settings of application
 type Config struct {
-	Service struct {
+	Server struct {
 		ServerAddress    string `fig:"serverAddress" default:"localhost"`    // address of server
 		ServerPort       int    `fig:"serverPort" default:"4112"`            // port of server
-		TypeOfService    string `fig:"typeOfService" default:"stdlib"`       // type of service: (stdlib, gin, gorilla, fasthttp)
+		TypeOfServer     string `fig:"typeOfServer" default:"stdlib"`        // type of server: (stdlib, gin, gorilla, fasthttp)
 		TypeOfRepository string `fig:"typeOfRepository" default:"in-memory"` // type of repository: (in-memory, PostrgreSQL, MySQL)
-	} `fig:"service"`
+	} `fig:"server"`
 	ErrorLogger *log.Logger // logger for use, don't load from configuration file
 }
 

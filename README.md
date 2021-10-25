@@ -12,7 +12,9 @@ storage
 1. in-memory storage using map - pkg inmemory;
 
 data model - pkg models. 
+
 config - pkg config, file conig.yaml. 
+
 test queries - file testURL.txt.
 
 TODO:
@@ -28,4 +30,5 @@ storage
 3. MongoDB;
 
 Unit tests
+
 Benchmarks

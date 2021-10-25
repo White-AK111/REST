@@ -31,6 +31,12 @@ storage
 2. MySQL;
 3. MongoDB;
 
+authentication
+1. HTTPS/TLS;
+2. JWT;
+3. Cookies;
+4. OAuth 2.0;
+
 Unit tests
 
 Benchmarks

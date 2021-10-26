@@ -1,7 +1,7 @@
 # REST
 Examples of REST web server implementation in Go with different storages.
 
-Already done:
+Already DONE:
 
 web server
 1. Standard library net/http web server - pkg stdlib-http;

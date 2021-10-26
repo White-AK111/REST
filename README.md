@@ -24,6 +24,8 @@ Middleware
 
 OpenAPI && Swagger
 
+Graceful shutdown
+
 web server
 1. Library fiber web server;
 2. Library beego web server;

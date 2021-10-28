@@ -7,7 +7,7 @@ import (
 	"github.com/White-AK111/REST/config"
 	"github.com/White-AK111/REST/internal/models"
 	"github.com/White-AK111/REST/internal/models/inmemory"
-	"log"
+	"github.com/White-AK111/REST/middleware"
 	"mime"
 	"net/http"
 	"strconv"
@@ -82,8 +82,6 @@ func (ts *taskServer) taskHandler(w http.ResponseWriter, req *http.Request) {
 
 // createTaskHandler handler for POST method do create task.
 func (ts *taskServer) createTaskHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("handling task create at %s\n", req.URL.Path)
-
 	// Types used internally in this handler to (de-)serialize the request and response from/to JSON.
 	type RequestTask struct {
 		Text string    `json:"text"`
@@ -121,16 +119,12 @@ func (ts *taskServer) createTaskHandler(w http.ResponseWriter, req *http.Request
 
 // getAllTasksHandler handler for GET method without id.
 func (ts *taskServer) getAllTasksHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("handling get all tasks at %s\n", req.URL.Path)
-
 	allTasks := ts.store.GetAllTasks()
 	renderJSON(w, allTasks)
 }
 
 // getTaskHandler handler for GET method with id.
 func (ts *taskServer) getTaskHandler(w http.ResponseWriter, req *http.Request, id int) {
-	log.Printf("handling get task at %s\n", req.URL.Path)
-
 	task, err := ts.store.GetTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -142,8 +136,6 @@ func (ts *taskServer) getTaskHandler(w http.ResponseWriter, req *http.Request, i
 
 // deleteTaskHandler handler for DELETE method with id.
 func (ts *taskServer) deleteTaskHandler(w http.ResponseWriter, req *http.Request, id int) {
-	log.Printf("handling delete task at %s\n", req.URL.Path)
-
 	err := ts.store.DeleteTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -152,7 +144,6 @@ func (ts *taskServer) deleteTaskHandler(w http.ResponseWriter, req *http.Request
 
 // deleteAllTasksHandler handler for DELETE method without id.
 func (ts *taskServer) deleteAllTasksHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("handling delete all tasks at %s\n", req.URL.Path)
 	err := ts.store.DeleteAllTasks()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -161,8 +152,6 @@ func (ts *taskServer) deleteAllTasksHandler(w http.ResponseWriter, req *http.Req
 
 // tagHandler handler for "tag" path.
 func (ts *taskServer) tagHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("handling tasks by tag at %s\n", req.URL.Path)
-
 	if req.Method != http.MethodGet {
 		http.Error(w, fmt.Sprintf("expect method GET /tag/<tag>, got %v", req.Method), http.StatusMethodNotAllowed)
 		return
@@ -182,8 +171,6 @@ func (ts *taskServer) tagHandler(w http.ResponseWriter, req *http.Request) {
 
 // dueHandler handler for "due" path.
 func (ts *taskServer) dueHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("handling tasks by due at %s\n", req.URL.Path)
-
 	if req.Method != http.MethodGet {
 		http.Error(w, fmt.Sprintf("expect method GET /due/<date>, got %v", req.Method), http.StatusMethodNotAllowed)
 		return
@@ -229,16 +216,19 @@ func Init(cfg *config.Config) {
 	case "in-memory":
 		server = NewTaskServerInmemory()
 	default:
-		log.Fatal("Unknown repository type.")
+		cfg.ErrorLogger.Fatal("Unknown repository type.")
 	}
 
 	mux.HandleFunc("/task/", server.taskHandler)
 	mux.HandleFunc("/tag/", server.tagHandler)
 	mux.HandleFunc("/due/", server.dueHandler)
 
-	log.Printf("Start server on: %s\n", cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort))
-	err := http.ListenAndServe(cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort), mux)
+	handler := middleware.Logging(mux)
+	handler = middleware.PanicRecovery(handler)
+
+	cfg.ErrorLogger.Printf("Start server %s with storage %s on: %s\n", cfg.Server.TypeOfServer, cfg.Server.TypeOfRepository, cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort))
+	err := http.ListenAndServe(cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort), handler)
 	if err != nil {
-		log.Fatalf("Error on start server: %s\n", err)
+		cfg.ErrorLogger.Fatalf("Error on start server: %s\n", err)
 	}
 }

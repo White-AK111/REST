@@ -7,7 +7,7 @@ import (
 	"github.com/White-AK111/REST/config"
 	"github.com/White-AK111/REST/internal/models"
 	"github.com/White-AK111/REST/internal/models/inmemory"
-	"log"
+	"github.com/White-AK111/REST/middleware"
 	"mime"
 	"net/http"
 	"strconv"
@@ -44,8 +44,6 @@ func renderJSON(w http.ResponseWriter, v interface{}) {
 
 // createTaskHandler handler for POST method do create task.
 func (ts *taskServer) createTaskHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("handling task create at %s\n", req.URL.Path)
-
 	// Types used internally in this handler to (de-)serialize the request and response from/to JSON.
 	type RequestTask struct {
 		Text string    `json:"text"`
@@ -83,16 +81,12 @@ func (ts *taskServer) createTaskHandler(w http.ResponseWriter, req *http.Request
 
 // getAllTasksHandler handler for GET method without id.
 func (ts *taskServer) getAllTasksHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("handling get all tasks at %s\n", req.URL.Path)
-
 	allTasks := ts.store.GetAllTasks()
 	renderJSON(w, allTasks)
 }
 
 // getTaskHandler handler for GET method with id.
 func (ts *taskServer) getTaskHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("handling get task at %s\n", req.URL.Path)
-
 	// Here and elsewhere, not checking error of convert because the router only matches the [0-9]+ regex.
 	id, _ := strconv.Atoi(mux.Vars(req)["id"])
 	task, err := ts.store.GetTask(id)
@@ -107,8 +101,6 @@ func (ts *taskServer) getTaskHandler(w http.ResponseWriter, req *http.Request) {
 
 // deleteTaskHandler handler for DELETE method with id.
 func (ts *taskServer) deleteTaskHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("handling delete task at %s\n", req.URL.Path)
-
 	id, _ := strconv.Atoi(mux.Vars(req)["id"])
 	err := ts.store.DeleteTask(id)
 
@@ -119,7 +111,6 @@ func (ts *taskServer) deleteTaskHandler(w http.ResponseWriter, req *http.Request
 
 // deleteAllTasksHandler handler for DELETE method without id.
 func (ts *taskServer) deleteAllTasksHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("handling delete all tasks at %s\n", req.URL.Path)
 	err := ts.store.DeleteAllTasks()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -128,8 +119,6 @@ func (ts *taskServer) deleteAllTasksHandler(w http.ResponseWriter, req *http.Req
 
 // tagHandler handler for "tag" path.
 func (ts *taskServer) tagHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("handling tasks by tag at %s\n", req.URL.Path)
-
 	tag := mux.Vars(req)["tag"]
 	tasks := ts.store.GetTasksByTag(tag)
 	renderJSON(w, tasks)
@@ -137,8 +126,6 @@ func (ts *taskServer) tagHandler(w http.ResponseWriter, req *http.Request) {
 
 // dueHandler handler for "due" path.
 func (ts *taskServer) dueHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("handling tasks by due at %s\n", req.URL.Path)
-
 	vars := mux.Vars(req)
 	badRequestError := func() {
 		http.Error(w, fmt.Sprintf("expect /due/<year>/<month>/<day>, got %v", req.URL.Path), http.StatusBadRequest)
@@ -166,7 +153,7 @@ func Init(cfg *config.Config) {
 	case "in-memory":
 		server = NewTaskServerInmemory()
 	default:
-		log.Fatal("Unknown repository type.")
+		cfg.ErrorLogger.Fatal("Unknown repository type.")
 	}
 
 	router.HandleFunc("/task/", server.createTaskHandler).Methods("POST")
@@ -177,9 +164,18 @@ func Init(cfg *config.Config) {
 	router.HandleFunc("/tag/{tag}", server.tagHandler).Methods("GET")
 	router.HandleFunc("/due/{year:[0-9]+}/{month:[0-9]+}/{day:[0-9]+}", server.dueHandler).Methods("GET")
 
-	log.Printf("Start server on: %s\n", cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort))
+	// Use common functions
+	router.Use(middleware.Logging, middleware.PanicRecovery)
+
+	// Use gorilla/handlers
+	//router.Use(func(h http.Handler) http.Handler {
+	//	return handlers.LoggingHandler(os.Stdout, h)
+	//})
+	//router.Use(handlers.RecoveryHandler(handlers.PrintRecoveryStack(true)))
+
+	cfg.ErrorLogger.Printf("Start server %s with storage %s on: %s\n", cfg.Server.TypeOfServer, cfg.Server.TypeOfRepository, cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort))
 	err := http.ListenAndServe(cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort), router)
 	if err != nil {
-		log.Fatalf("Error on start server: %s\n", err)
+		cfg.ErrorLogger.Fatalf("Error on start server: %s\n", err)
 	}
 }

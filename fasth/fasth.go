@@ -6,9 +6,9 @@ import (
 	"github.com/White-AK111/REST/config"
 	"github.com/White-AK111/REST/internal/models"
 	"github.com/White-AK111/REST/internal/models/inmemory"
+	"github.com/White-AK111/REST/middleware"
 	"github.com/fasthttp/router"
 	"github.com/valyala/fasthttp"
-	"log"
 	"mime"
 	"net/http"
 	"strconv"
@@ -43,15 +43,12 @@ func renderJSONFast(c *fasthttp.RequestCtx, v interface{}) {
 
 // getAllTasksHandler handler for GET method without id.
 func (ts *taskServer) getAllTasksHandler(c *fasthttp.RequestCtx) {
-	log.Printf("handling get all tasks at %s\n", string(c.Path()))
-
 	allTasks := ts.store.GetAllTasks()
 	renderJSONFast(c, allTasks)
 }
 
 // deleteAllTasksHandler handler for DELETE method without id.
 func (ts *taskServer) deleteAllTasksHandler(c *fasthttp.RequestCtx) {
-	log.Printf("handling delete all tasks at %s\n", string(c.Path()))
 	err := ts.store.DeleteAllTasks()
 	if err != nil {
 		c.Error(err.Error(), http.StatusNotFound)
@@ -60,8 +57,6 @@ func (ts *taskServer) deleteAllTasksHandler(c *fasthttp.RequestCtx) {
 
 // createTaskHandler handler for POST method do create task.
 func (ts *taskServer) createTaskHandler(c *fasthttp.RequestCtx) {
-	log.Printf("handling task create at %s\n", string(c.Path()))
-
 	// Types used internally in this handler to (de-)serialize the request and response from/to JSON.
 	type RequestTask struct {
 		Text string    `json:"text"`
@@ -97,8 +92,6 @@ func (ts *taskServer) createTaskHandler(c *fasthttp.RequestCtx) {
 
 // getTaskHandler handler for GET method with id.
 func (ts *taskServer) getTaskHandler(c *fasthttp.RequestCtx) {
-	log.Printf("handling get task at %s\n", string(c.Path()))
-
 	id, _ := strconv.Atoi(c.UserValue("id").(string))
 	task, err := ts.store.GetTask(id)
 	if err != nil {
@@ -111,8 +104,6 @@ func (ts *taskServer) getTaskHandler(c *fasthttp.RequestCtx) {
 
 // deleteTaskHandler handler for DELETE method with id.
 func (ts *taskServer) deleteTaskHandler(c *fasthttp.RequestCtx) {
-	log.Printf("handling delete task at %s\n", string(c.Path()))
-
 	id, _ := strconv.Atoi(c.UserValue("id").(string))
 	err := ts.store.DeleteTask(id)
 	if err != nil {
@@ -122,8 +113,6 @@ func (ts *taskServer) deleteTaskHandler(c *fasthttp.RequestCtx) {
 
 // tagHandler handler for "tag" path.
 func (ts *taskServer) tagHandler(c *fasthttp.RequestCtx) {
-	log.Printf("handling tasks by tag at %s\n", string(c.Path()))
-
 	tag := c.UserValue("tag").(string)
 	tasks := ts.store.GetTasksByTag(tag)
 	renderJSONFast(c, tasks)
@@ -131,8 +120,6 @@ func (ts *taskServer) tagHandler(c *fasthttp.RequestCtx) {
 
 // dueHandler handler for "due" path.
 func (ts *taskServer) dueHandler(c *fasthttp.RequestCtx) {
-	log.Printf("handling tasks by due at %s\n", string(c.Path()))
-
 	badRequestError := func() {
 		c.Error(fmt.Sprintf("expect /due/<year>/<month>/<day>, got %v", string(c.Path())), http.StatusBadRequest)
 	}
@@ -149,6 +136,10 @@ func (ts *taskServer) dueHandler(c *fasthttp.RequestCtx) {
 	renderJSONFast(c, tasks)
 }
 
+func (ts *taskServer) panicHandler(c *fasthttp.RequestCtx) {
+	panic("test panic")
+}
+
 // Init function do initialize a new server with parameters from config.yaml.
 func Init(cfg *config.Config) {
 	r := router.New()
@@ -158,7 +149,7 @@ func Init(cfg *config.Config) {
 	case "in-memory":
 		server = NewTaskServerInmemory()
 	default:
-		log.Fatal("Unknown repository type.")
+		cfg.ErrorLogger.Fatal("Unknown repository type.")
 	}
 
 	r.POST("/task/", server.createTaskHandler)
@@ -168,10 +159,18 @@ func Init(cfg *config.Config) {
 	r.DELETE("/task/{id:[0-9]+}", server.deleteTaskHandler)
 	r.GET("/tag/{tag}", server.tagHandler)
 	r.GET("/due/{year:[0-9]+}/{month:[0-9]+}/{day:[0-9]+}", server.dueHandler)
+	// For test panic
+	r.GET("/panic", server.panicHandler)
 
-	log.Printf("Start server on: %s\n", cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort))
-	err := fasthttp.ListenAndServe(cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort), r.Handler)
+	cfg.ErrorLogger.Printf("Start server %s with storage %s on: %s\n", cfg.Server.TypeOfServer, cfg.Server.TypeOfRepository, cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort))
+
+	s := &fasthttp.Server{
+		Handler: middleware.LoggerAndPanicRecover(r.Handler),
+		Name:    "fastHttpWithLoggerAndPanicRecover",
+	}
+
+	err := s.ListenAndServe(cfg.Server.ServerAddress + ":" + strconv.Itoa(cfg.Server.ServerPort))
 	if err != nil {
-		log.Fatalf("Error on start server: %s\n", err)
+		cfg.ErrorLogger.Fatalf("Error on start server: %s\n", err)
 	}
 }

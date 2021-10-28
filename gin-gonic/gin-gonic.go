@@ -4,7 +4,6 @@ import (
 	"github.com/White-AK111/REST/config"
 	"github.com/White-AK111/REST/internal/models"
 	"github.com/White-AK111/REST/internal/models/inmemory"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -128,7 +127,7 @@ func Init(cfg *config.Config) {
 	case "in-memory":
 		server = NewTaskServerInmemory()
 	default:
-		log.Fatal("Unknown repository type.")
+		cfg.ErrorLogger.Fatal("Unknown repository type.")
 	}
 
 	router.POST("/task/", server.createTaskHandler)
@@ -139,9 +138,9 @@ func Init(cfg *config.Config) {
 	router.GET("/tag/:tag", server.tagHandler)
 	router.GET("/due/:year/:month/:day", server.dueHandler)
 
-	log.Printf("Start server on: %s\n", cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort))
+	cfg.ErrorLogger.Printf("Start server %s with storage %s on: %s\n", cfg.Server.TypeOfServer, cfg.Server.TypeOfRepository, cfg.Server.ServerAddress+":"+strconv.Itoa(cfg.Server.ServerPort))
 	err := router.Run(cfg.Server.ServerAddress + ":" + strconv.Itoa(cfg.Server.ServerPort))
 	if err != nil {
-		log.Fatalf("Error on start server: %s\n", err)
+		cfg.ErrorLogger.Fatalf("Error on start server: %s\n", err)
 	}
 }
